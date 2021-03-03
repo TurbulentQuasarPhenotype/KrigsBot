@@ -1,0 +1,23 @@
+# Ignore the pychache
+__pycache__
+
+# Ignore the contents of the Auth folder
+Auth/*
+
+# Ignore any events saved to the event folder
+Events/*
+
+# No need to to sync images; provide your own.
+Images/*
+
+# You'll have to figure this one out yourself.
+Data/*
+
+# Logs are good, but not for sharing
+discord.log
+
+# Everyone enjoys a good Vim setup
+Session.vim
+
+# Secret shame; first version of the bot.
+KrigsBotRewrite.py
