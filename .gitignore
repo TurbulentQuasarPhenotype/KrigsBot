@@ -27,3 +27,6 @@ KrigsBotRewrite.py
 
 # All the secrets, but none for sharing.
 .env
+
+# Ignore swp-files
+*.swp
