@@ -108,63 +108,107 @@ class Events(commands.Cog, name="Events"):
 
 
     @event.command(
-            help="Removes the caller from the participant list of an event."
+            help="Removes the caller from the participant list of an event.",
+            rest_is_raw=True
             )
-    async def leave(self, ctx, eventID):
+    async def leave(self, ctx, eventID, *, args):
         logCommand(ctx)
 
-        #first, check if the event exists
+        # Attempt to load event.
         eventFile = self.getEventByID(eventID)
 
+        # If no event found, assume the eventID was wrong.
+        # Give feedback to caller and stop.
         if not eventFile:
             await ctx.send(f"No event found matching: {eventID}")
             return
+
+        # Assume that we got a well formatted event and proceed.
         else:
         
+            # Load event json so that we may operate on it. 
             with open(f"{EVENT_DIR}{eventFile}") as file:
                 data = json.load(file)
 
+            # Check if the author is in the participant list.
+            # If not, give feedback to the caller and stop.
             if not ctx.author.id in data['participants']:
                 await ctx.send(f"{ctx.author.name} is not participating in event: {eventID}.")
                 return    
+            
+            # Since the caller is in the participant list, proceed to remove them.
+            else:
 
-            data['participants'].remove(ctx.author.id)
+                # Remove the caller's discordID from the participants array.
+                data['participants'].remove(ctx.author.id)
 
-            with open(f"{EVENT_DIR}{eventFile}", "w") as file:
-                json.dump(data,file)
+                # Override the event json with our updated data.
+                with open(f"{EVENT_DIR}{eventFile}", "w") as file:
+                    json.dump(data,file)
 
-            await ctx.send(f"{ctx.author.name} is no longer participating in event: {eventID}.")
+                # Log the removal, and give feedback to the caller.                
+                logger.info(f"Removed [ctx.author.name] from event: {data['name']} - {eventID}.")
+                await ctx.send(f"{ctx.author.name} is no longer participating in event: {eventID}.")
  
+                # Unless the command was invoked with the "-silent" argument, post the event to the EVENT_CHANNEL.
+                if not "-silent" in shlex.split(args):
+                    
+                    channel = self.bot.get_guild(EVENT_GUILD).get_channel(EVENT_CHANNEL)
+                    await channel.send(f"{ctx.author.name} has joined event: {data['name']} - {eventID}")
 
 
     @event.command(
-            help="Adds the caller to the participants list of an event."
+            help="Adds the caller to the participants list of an event.",
+            rest_is_raw=True
             )
-    async def join(self, ctx, eventID):
+    async def join(self, ctx, eventID, *, args):
         logCommand(ctx)
 
-        #first, check if the event exists
+        # Attempt to load the event by eventId.
         eventFile = self.getEventByID(eventID)
 
+        # If no event was loaded, assume there is not event by that eventId.
+        # Give feedback to caller and stop.
         if not eventFile:
             await ctx.send(f"No event found matching: {eventID}")
             return
+
+        # If an event was loaded, we assume it is well formatted and proceed to
+        # add the user to the participant list.
         else:
         
+            # Load the event json so that we may operate on it.
             with open(f"{EVENT_DIR}{eventFile}") as file:
                 data = json.load(file)
 
+            # If the caller is already in the participant list, then there is nothing to be done.
+            # Give feeback to the caller and stop.
             if ctx.author.id in data['participants']:
                 await ctx.send(f"{ctx.author.name} is already participating in event: {eventID}")
                 return
 
-            data['participants'].append(ctx.author.id)
+            # The caller is not already in the participant list.
+            # We now add them to the list.
+            else:
 
-            with open(f"{EVENT_DIR}{eventFile}", "w") as file:
-                json.dump(data,file)
+                # Append the callers discordID to the participants array.
+                data['participants'].append(ctx.author.id)
 
-            await ctx.send(f"Added {ctx.author.id} to event: {eventID}.")
- 
+                # Override the previous event data with our updated json.
+                with open(f"{EVENT_DIR}{eventFile}", "w") as file:
+                    json.dump(data,file)
+
+                # Log the update, and give feedback to the caller.
+                logger.info(f"Added {ctx.author.name} to event: {eventID}.")
+                await ctx.send(f"Added {ctx.author.name} to event: {data['name']} - {eventID}.")
+
+                # Unless the command was passed with a "-silent" argument, post the update to the EVENT_CHANNEL.
+                if not "-silent" in shlex.split(args):
+
+                    channel = self.bot.get_guild(EVENT_GUILD).get_channel(EVENT_CHANNEL)
+                    await channel.send(f"{ctx.author.name} has joined event: {data['name']} - {eventID}")
+
+
 
     @event.command(
             help="Removes an existing event (Organiser only)."
@@ -391,7 +435,7 @@ class Events(commands.Cog, name="Events"):
             id = f"{date}#{randint(1000,9999)}"
 
             if participants is None:
-                participants = "No one"
+                participants = []
             else:
                 result = []
                 for person in participants:
