@@ -1,6 +1,5 @@
 # Cog - events.py
 # A module for creating and administering event bookings.
-# Started: 2021-01-25
 
 import discord
 import json
